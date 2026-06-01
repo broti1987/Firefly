@@ -235,12 +235,13 @@ const loader   = document.getElementById('loader');
 const audioBar = document.getElementById('audio-bar');
 const btnAudio = document.getElementById('btn-audio');
 
+const landing   = document.getElementById('landing');
+const btnRelease = document.getElementById('btn-release');
+
+// Loader auto-dismisses when video is ready, reveals landing button
 function onVideoReady() {
   loader.classList.add('fade-out');
   setTimeout(() => loader.remove(), 900);
-  video.play().catch(console.error);
-  playing = true;
-  audioBar.classList.add('visible');
 }
 
 if (video.readyState >= 3) {
@@ -249,15 +250,23 @@ if (video.readyState >= 3) {
   video.addEventListener('canplaythrough', onVideoReady, { once: true });
 }
 
-// ─── AUDIO REACT TOGGLE ───────────────────────────────────────────────────────
-btnAudio.addEventListener('click', async () => {
-  // First press initialises AudioContext (requires user gesture)
-  if (!audioCtx) {
-    initAudio();
-    await audioCtx.resume();
-    try { await audioEl.play(); } catch (e) { console.error('[depth] audio:', e); }
-  }
+// Landing button — user gesture unlocks audio and starts everything
+btnRelease.addEventListener('click', async () => {
+  landing.classList.add('fade-out');
+  setTimeout(() => landing.remove(), 1100);
 
+  // Start audio (requires this user gesture)
+  initAudio();
+  await audioCtx.resume();
+  try { await audioEl.play(); } catch (e) { console.error('[depth] audio:', e); }
+
+  video.play().catch(console.error);
+  playing = true;
+  audioBar.classList.add('visible');
+});
+
+// ─── AUDIO REACT TOGGLE ───────────────────────────────────────────────────────
+btnAudio.addEventListener('click', () => {
   audioReact = !audioReact;
   btnAudio.textContent = audioReact ? 'Ignited' : 'Ignite';
   btnAudio.classList.toggle('active', audioReact);
