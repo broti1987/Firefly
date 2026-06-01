@@ -26,7 +26,6 @@ const CAM_OUT_R = 9.0;   // rest orbit radius
 const CAM_IN_R  = 2.2;   // inside-cloud orbit radius
 let camAngle = 0;         // current angle around Y axis
 let camRadius = CAM_OUT_R;
-let orbitEnabled = false;
 let isDragging   = false;
 let dragStartX   = 0;
 let angleStart   = 0;
@@ -144,9 +143,9 @@ const fragmentShader = /* glsl */`
     float core  = 1.0 - smoothstep(0.0,  0.22, dist);
     float aura  = 1.0 - smoothstep(0.12, 0.5,  dist);
     float alpha = (core * 0.9 + aura * 0.2) * uOpacity;
+    alpha *= smoothstep(0.0, 0.15, vDepth01);  // Hide background particles
 
     float lum = pow(clamp(vDepth01, 0.001, 1.0), uContrast) * uBrightness;
-    lum = clamp(lum + uBass * 0.4, 0.0, 1.0);
 
     gl_FragColor = vec4(vec3(lum), alpha);
   }
@@ -190,7 +189,7 @@ function updateDepth() {
 
 // ─── CAMERA ANIMATION ─────────────────────────────────────────────────────────
 function updateCamera() {
-  const targetRadius = audioReact ? CAM_IN_R : CAM_OUT_R;
+  const targetRadius = CAM_OUT_R;  // Always stay at outer radius, no zoom
   camRadius += (targetRadius - camRadius) * 0.035;
 
   if (audioReact) {
@@ -218,7 +217,7 @@ function animate() {
   if (playing) {
     if (audioReact && analyser) {
       analyser.getByteFrequencyData(freqData);
-      bassSmooth += (band(20, 250)     - bassSmooth) * 0.18;
+      bassSmooth += (band(20, 150)     - bassSmooth) * 0.18;
       trebSmooth += (band(4000, 16000) - trebSmooth) * 0.22;
       mat.uniforms.uBass.value   = bassSmooth;
       mat.uniforms.uTreble.value = trebSmooth;
@@ -240,9 +239,22 @@ animate();
 const loader   = document.getElementById('loader');
 const audioBar = document.getElementById('audio-bar');
 const btnAudio = document.getElementById('btn-audio');
+const slidersContainer = document.getElementById('sliders-container');
 
 const landing   = document.getElementById('landing');
 const btnRelease = document.getElementById('btn-release');
+const rotationHint = document.getElementById('rotation-hint');
+
+function hideRotationHint() {
+  rotationHint.classList.remove('visible');
+  rotationHint.classList.add('fade-out');
+}
+
+function showRotationHintDemo() {
+  rotationHint.classList.add('visible');
+  rotationHint.classList.remove('fade-out');
+  setTimeout(hideRotationHint, 3000);
+}
 
 // Loader auto-dismisses when video is ready, reveals landing button
 function onVideoReady() {
@@ -259,7 +271,10 @@ if (video.readyState >= 3) {
 // Landing button — user gesture unlocks audio and starts everything
 btnRelease.addEventListener('click', async () => {
   landing.classList.add('fade-out');
-  setTimeout(() => landing.remove(), 1100);
+  setTimeout(() => {
+    landing.remove();
+    showRotationHintDemo();
+  }, 1100);
 
   // Start audio (requires this user gesture)
   initAudio();
@@ -268,22 +283,24 @@ btnRelease.addEventListener('click', async () => {
 
   video.play().catch(console.error);
   playing = true;
-  audioBar.classList.add('visible');
+  // Show audio bar after rotation hint has finished (1100ms landing + 3000ms hint + 300ms fade)
+  setTimeout(() => audioBar.classList.add('visible'), 4400);
 });
 
 // ─── AUDIO REACT TOGGLE ───────────────────────────────────────────────────────
 btnAudio.addEventListener('click', () => {
   audioReact = !audioReact;
-  orbitEnabled = audioReact;
+  slidersContainer.classList.toggle('visible', audioReact);
   btnAudio.textContent = audioReact ? 'Reform' : 'Ignite';
   btnAudio.classList.toggle('active', audioReact);
 });
 
+
 renderer.domElement.addEventListener('pointerdown', (event) => {
-  if (!orbitEnabled) return;
   isDragging = true;
   dragStartX = event.clientX;
   angleStart = camAngle;
+  rotationHint.classList.add('fade-out');
   renderer.domElement.setPointerCapture(event.pointerId);
 });
 
