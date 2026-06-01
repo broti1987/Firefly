@@ -16,6 +16,7 @@ canvas {
   display: block;
   position: fixed;
   inset: 0;
+  touch-action: none;
 }
 
 /* ── Landing ───────────────────────────────────────────────── */
@@ -107,6 +108,8 @@ canvas {
   color: rgba(255,255,255,0.75);
   text-transform: uppercase;
   letter-spacing: 0.2em;
+  text-indent: 0.2em;
+  white-space: nowrap;
 }
 
 .chevron.left {
