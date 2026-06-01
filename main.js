@@ -26,6 +26,10 @@ const CAM_OUT_R = 9.0;   // rest orbit radius
 const CAM_IN_R  = 2.2;   // inside-cloud orbit radius
 let camAngle = 0;         // current angle around Y axis
 let camRadius = CAM_OUT_R;
+let orbitEnabled = false;
+let isDragging   = false;
+let dragStartX   = 0;
+let angleStart   = 0;
 
 // ─── VIDEO (depth map) ────────────────────────────────────────────────────────
 const video       = document.createElement('video');
@@ -190,7 +194,9 @@ function updateCamera() {
   camRadius += (targetRadius - camRadius) * 0.035;
 
   if (audioReact) {
-    camAngle += 0.007; // continuous rotation
+    if (!isDragging) {
+      camAngle += 0.007; // continuous rotation
+    }
   } else {
     // Slowly wind angle back toward 0 once almost stopped
     camAngle *= 0.98;
@@ -268,8 +274,33 @@ btnRelease.addEventListener('click', async () => {
 // ─── AUDIO REACT TOGGLE ───────────────────────────────────────────────────────
 btnAudio.addEventListener('click', () => {
   audioReact = !audioReact;
-  btnAudio.textContent = audioReact ? 'Ignited' : 'Ignite';
+  orbitEnabled = audioReact;
+  btnAudio.textContent = audioReact ? 'Reform' : 'Ignite';
   btnAudio.classList.toggle('active', audioReact);
+});
+
+renderer.domElement.addEventListener('pointerdown', (event) => {
+  if (!orbitEnabled) return;
+  isDragging = true;
+  dragStartX = event.clientX;
+  angleStart = camAngle;
+  renderer.domElement.setPointerCapture(event.pointerId);
+});
+
+window.addEventListener('pointermove', (event) => {
+  if (!isDragging) return;
+  const deltaX = event.clientX - dragStartX;
+  camAngle = angleStart + deltaX * 0.005;
+});
+
+window.addEventListener('pointerup', (event) => {
+  if (!isDragging) return;
+  isDragging = false;
+  renderer.domElement.releasePointerCapture(event.pointerId);
+});
+
+window.addEventListener('pointercancel', () => {
+  isDragging = false;
 });
 
 // ─── CONTROLS ─────────────────────────────────────────────────────────────────
