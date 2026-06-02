@@ -262,9 +262,9 @@ input[type=range]::-webkit-slider-thumb {
   overflow: hidden;
   padding: 8px 18px;
   background: #000;
-  border: none;
+  border: 1px solid transparent;
   border-radius: 3px;
-  color: #fff;
+  color: rgba(255,255,255,0.7);
   font-family: inherit;
   font-size: 10px;
   font-weight: 600;
@@ -272,8 +272,7 @@ input[type=range]::-webkit-slider-thumb {
   text-transform: uppercase;
   cursor: pointer;
   white-space: nowrap;
-  opacity: 0.7;
-  transition: opacity 0.2s, transform 0.2s;
+  transition: border-color 0.2s, background 0.2s;
 }
 
 #btn-audio::before {
@@ -295,9 +294,8 @@ input[type=range]::-webkit-slider-thumb {
 }
 
 #btn-audio.active {
-  opacity: 1;
   background: transparent;
-  border: 1px solid rgba(255,255,255,0.35);
+  border-color: rgba(255,255,255,0.35);
 }
 
 @keyframes shimmer {
@@ -307,10 +305,10 @@ input[type=range]::-webkit-slider-thumb {
 
 #sliders-container {
   display: none;
-  flex-direction: column;
-  gap: 16px;
+  flex-direction: row;
+  align-items: center;
+  gap: 24px;
   width: 100%;
-  max-width: 260px;
 }
 
 #btn-reform {
@@ -348,12 +346,9 @@ input[type=range]::-webkit-slider-thumb {
   display: flex;
 }
 
-#btn-audio.active {
-  opacity: 1;
-}
-
 .audio-ctrl {
-  width: 100%;
+  flex: 1;
+  min-width: 120px;
 }
 
 .audio-ctrl label {

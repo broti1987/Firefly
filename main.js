@@ -94,15 +94,21 @@ for (let row = 0; row < GRID_H; row++) {
   }
 }
 
+const colArr  = new Float32Array(N * 3);
+
 const geo     = new THREE.BufferGeometry();
 const posAttr = new THREE.BufferAttribute(posArr, 3);
+const colAttr = new THREE.BufferAttribute(colArr, 3);
 posAttr.setUsage(THREE.DynamicDrawUsage);
+colAttr.setUsage(THREE.DynamicDrawUsage);
 geo.setAttribute('position', posAttr);
+geo.setAttribute('aColor',   colAttr);
 geo.setAttribute('aRand', new THREE.BufferAttribute(randArr, 3));
 
 // ─── SHADERS ──────────────────────────────────────────────────────────────────
 const vertexShader = /* glsl */`
   attribute vec3 aRand;
+  attribute vec3 aColor;
 
   uniform float uPointSize;
   uniform float uBass;
@@ -111,15 +117,17 @@ const vertexShader = /* glsl */`
   uniform float uTrebleVib;
 
   varying float vDepth01;
+  varying vec3  vColor;
 
   void main() {
     vec3 pos = position;
 
-    // Treble: scatter each particle along its unique 3D random vector
-    float scatter = uTreble * uTrebleVib;
+    // Treble: scatter with per-particle random magnitude (aRand.z gives 0..1 variance)
+    float scatter = uTreble * uTrebleVib * abs(aRand.z);
     pos += aRand * scatter;
 
     vDepth01 = clamp((position.z + 3.0) / 6.0, 0.0, 1.0);
+    vColor   = aColor;
 
     vec4 mvPos   = modelViewMatrix * vec4(pos, 1.0);
     gl_PointSize = (uPointSize + uBass * uBassSize) * (18.0 / -mvPos.z);
@@ -134,6 +142,7 @@ const fragmentShader = /* glsl */`
   uniform float uBass;
 
   varying float vDepth01;
+  varying vec3  vColor;
 
   void main() {
     vec2  uv   = gl_PointCoord - 0.5;
@@ -147,7 +156,11 @@ const fragmentShader = /* glsl */`
 
     float lum = pow(clamp(vDepth01, 0.001, 1.0), uContrast) * uBrightness;
 
-    gl_FragColor = vec4(vec3(lum), alpha);
+    // Normalize color to max channel so dark video pixels don't double-darken the depth lum
+    float maxC = max(vColor.r, max(vColor.g, vColor.b));
+    vec3  col  = (vColor / (maxC + 0.001)) * lum;
+
+    gl_FragColor = vec4(col, alpha);
   }
 `;
 
@@ -179,12 +192,19 @@ function updateDepth() {
   const { data } = ctx2d.getImageData(0, 0, GRID_W, GRID_H);
   for (let i = 0; i < N; i++) {
     const p   = i * 4;
-    const bri = (data[p] + data[p + 1] + data[p + 2]) / (3 * 255);
+    const r   = data[p]     / 255;
+    const g   = data[p + 1] / 255;
+    const b   = data[p + 2] / 255;
+    const bri = (r + g + b) / 3;
     posArr[i * 3]     = baseXY[i * 2];
     posArr[i * 3 + 1] = baseXY[i * 2 + 1];
     posArr[i * 3 + 2] = (bri - 0.5) * depthScale;
+    colArr[i * 3]     = r;
+    colArr[i * 3 + 1] = g;
+    colArr[i * 3 + 2] = b;
   }
   posAttr.needsUpdate = true;
+  colAttr.needsUpdate = true;
 }
 
 // ─── CAMERA ANIMATION ─────────────────────────────────────────────────────────
